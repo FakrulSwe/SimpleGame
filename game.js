@@ -1,14 +1,25 @@
+const crypto = require('crypto');
 const prompt = require('prompt-sync')({sigint: true});
 
-const moves = ['rock', 'Spock', 'paper', 'lizard', 'scissors'];
+// Reading moves from command line arguments
+const moves = process.argv.slice(2);
 
-const winningMoves = {
-    rock: ['scissors', 'lizard'],
-    paper: ['rock', 'Spock'],
-    scissors: ['paper', 'lizard'],
-    lizard: ['Spock', 'paper'],
-    Spock: ['scissors', 'rock']
-};
+if (moves.length < 3) {
+    console.log('Please provide at least three moves.');
+    process.exit(1);
+}
+
+const winningMoves = {};
+for (let i = 0; i < moves.length; i++) {
+    winningMoves[moves[i]] = [];
+    for (let j = 1; j <= Math.floor((moves.length - 1) / 2); j++) {
+        winningMoves[moves[i]].push(moves[(i + j) % moves.length]);
+    }
+}
+
+function generateHMAC(key, message) {
+    return crypto.createHmac('sha256', key).update(message).digest('hex');
+}
 
 function getComputerMove() {
     const randomIndex = Math.floor(Math.random() * moves.length);
@@ -38,9 +49,15 @@ function playGame() {
     let playing = true;
 
     while (playing) {
+        const computerMove = getComputerMove();
+        const key = crypto.randomBytes(32).toString('hex');
+        const hmac = generateHMAC(key, computerMove);
+
+        console.log(`HMAC: ${hmac}`);
+        
         printMoves();
         const userInput = prompt('Enter your move: ');
-        
+
         if (userInput === '0') {
             console.log('Exiting the game.');
             playing = false;
@@ -51,13 +68,13 @@ function playGame() {
 
             if (userMoveIndex >= 0 && userMoveIndex < moves.length) {
                 const userMove = moves[userMoveIndex];
-                const computerMove = getComputerMove();
 
                 console.log(`Your move: ${userMove}`);
                 console.log(`Computer move: ${computerMove}`);
+                console.log(`Key: ${key}`);
                 console.log(getWinner(userMove, computerMove));
             } else {
-                console.log('Invalid move. Please enter a number between 0 and 5, or ? for help.');
+                console.log('Invalid move. Please enter a valid number or ? for help.');
             }
         }
     }
